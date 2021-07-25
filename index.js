@@ -93,7 +93,7 @@ async function run() {
                     )
                     if (has_response_message && e.response.data.message.indexOf('merge conflict') > -1){
                         console.log(
-                            `Pull #${pull_number} has conflicts`
+                            `Pull #${pull_number} has conflicts. Skipping.`
                         )
                     }else{
                         failures.push(
@@ -113,6 +113,8 @@ async function run() {
 
         if(successes.length > 0){
             core.setOutput("updated_pulls", successes.join(','))
+        }else{
+            core.setOutput("updated_pulls", "None"
         }
         if(failures.length > 0){
             const failures_str = JSON.stringify(failures, undefined, 4)
