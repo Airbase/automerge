@@ -80,7 +80,7 @@ async function run() {
                         }
                     )
                     console.log(update_response)
-                    successes.push(pull_number)
+                    successes.push(`#${pull_number}`)
                 }catch(e){
                     console.log(`Failure while trying to update #${pull_number}`);
                     console.log(e)
