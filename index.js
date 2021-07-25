@@ -114,7 +114,7 @@ async function run() {
         if(successes.length > 0){
             core.setOutput("updated_pulls", successes.join(','))
         }else{
-            core.setOutput("updated_pulls", "None"
+            core.setOutput("updated_pulls", "None")
         }
         if(failures.length > 0){
             const failures_str = JSON.stringify(failures, undefined, 4)
