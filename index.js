@@ -85,7 +85,6 @@ async function run() {
                     console.log(`Failure while trying to update #${pull_number}`);
                     console.log(typeof e)
                     console.log(e)
-                    console.log(e.keys())
 
                     var has_response_message = (
                         e.hasOwnProperty('response') 
