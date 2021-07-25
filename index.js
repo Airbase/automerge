@@ -84,11 +84,24 @@ async function run() {
                 }catch(e){
                     console.log(`Failure while trying to update #${pull_number}`);
                     console.log(e)
-                    failures.push(
-                        {
-                            pull_number: pulls_response.data['html_url']
-                        }
-                    );
+
+                    var has_response_message = (
+                        e.hasOwnProperty('response') 
+                        && e.response.hasOwnProperty('data')
+                        && e.response.data.hasOwnProperty('message')
+                    )
+                    if (has_response_message && e.response.data.indexOf('merge conflict') > -1){
+                        console.log(
+                            `Pull #${pull_number} has conflicts`
+                        )
+                    }else{
+                        failures.push(
+                            {
+                                pull_number: pulls_response.data['html_url']
+                            }
+                        );
+                    }
+                    
                 }
             }else{
                 console.log(
