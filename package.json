@@ -1,0 +1,24 @@
+{
+  "name": "automerge-base2head",
+  "version": "1.0.0",
+  "description": "Auto merge/update branches when commit is pushed to base on all open pull requests",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mehernosh/automerge-base2head.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mehernosh/automerge-base2head/issues"
+  },
+  "homepage": "https://github.com/mehernosh/automerge-base2head#readme",
+  "dependencies": {
+    "@actions/core": "^1.4.0",
+    "@actions/github": "^5.0.0"
+  },
+  "main": "index.js"
+}

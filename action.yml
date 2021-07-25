@@ -1,0 +1,16 @@
+name: 'Automerge-Base2Head'
+description: 'Automatically keep specified pull requests up to date.'
+inputs:
+  automerge-base2head-label:
+    description: 'The label on pull requests to be monitored to keep up to date'
+    required: true
+    default: 'BASE2HEAD-AUTOMERGE'
+  repo-token:
+    required: true
+    description: 'A github token with write access to update branches'
+outputs:
+  updated_pulls:
+    description: 'CSV of pulls that were updated successfully'
+runs:
+  using: 'node12'
+  main: 'index.js'
