@@ -83,14 +83,16 @@ async function run() {
                     successes.push(`#${pull_number}`)
                 }catch(e){
                     console.log(`Failure while trying to update #${pull_number}`);
+                    console.log(typeof e)
                     console.log(e)
+                    console.log(e.keys())
 
                     var has_response_message = (
                         e.hasOwnProperty('response') 
                         && e.response.hasOwnProperty('data')
                         && e.response.data.hasOwnProperty('message')
                     )
-                    if (has_response_message && e.response.data.indexOf('merge conflict') > -1){
+                    if (has_response_message && e.response.data.message.indexOf('merge conflict') > -1){
                         console.log(
                             `Pull #${pull_number} has conflicts`
                         )
