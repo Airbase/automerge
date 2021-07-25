@@ -1,5 +1,5 @@
 name: 'Automerge-Base2Head'
-description: 'Automatically keep specified pull requests up to date.'
+description: 'Automatically keep specified pull requests up to date. (Auto git merge-base or git rebase)'
 inputs:
   automerge-base2head-label:
     description: 'The label on pull requests to be monitored to keep up to date'
@@ -14,3 +14,6 @@ outputs:
 runs:
   using: 'node12'
   main: 'index.js'
+branding:
+  icon: 'git-merge'  
+  color: 'purple'
