@@ -1,127 +1,124 @@
-const core = require('@actions/core');
-const github = require('@actions/github');
+const core = require('@actions/core')
+const github = require('@actions/github')
 
-async function run() {
+async function run () {
+  try {
+    // Get the JSON webhook payload for the event that triggered the workflow
+    const payloadStr = JSON.stringify(github.context, undefined, 2)
+    console.log(`The event payload: ${payloadStr}`)
 
-    try {
-        // Get the JSON webhook payload for the event that triggered the workflow
-        const payload_str = JSON.stringify(github.context, undefined, 2)
-        console.log(`The event payload: ${payload_str}`);
-        
-        
-        const repo_token = core.getInput("repo-token"); 
-        const working_label = core.getInput(
-            'automerge-base2head-label'
-        );
+    const repoToken = core.getInput('repo-token')
+    const workingLabel = core.getInput(
+      'automerge-base2head-label'
+    )
 
-        var payload = github.context.payload;
-        const repo_name = payload.repository.name;
-        const owner_name = payload.repository.owner.name;
+    const payload = github.context.payload
+    const repoName = payload.repository.name
+    const ownerName = payload.repository.owner.name
 
-        var refsarr = payload.ref.split('/')
-        refsarr.splice(0,2)
-        const branch_name = refsarr.join('/')
+    const refsarr = payload.ref.split('/')
+    refsarr.splice(0, 2)
+    const branchName = refsarr.join('/')
 
-        console.log(
-            `Operating in: ${owner_name}/${repo_name}@${branch_name}`
-        );
+    console.log(
+            `Operating in: ${ownerName}/${repoName}@${branchName}`
+    )
 
-        if (working_label.length > 0){
-            console.log(
-                `Looking for open PRs labeled with: ${working_label}!`
-            );
-        }else{
-            throw {
-                "error": "Invalid 'automerge-base2head-label'",
-                "message": "Use 'with:' to specify a label to use."
-            }
-        }
-        const octokit = github.getOctokit(repo_token);
-
-        const pulls_response = await octokit.rest.pulls.list(
-            {
-                "owner": owner_name,
-                "repo": repo_name,
-                "base": branch_name,
-                "state":"open",
-                "sort":"created",
-                "direction":"asc",
-            }
-        )
-        console.log(pulls_response)
-
-        if (!pulls_response.hasOwnProperty('data') || pulls_response.data.length==0){
-            console.log(`No pulls found pointing to branch: ${branch_name}`);
-            return;
-        }
-
-        var failures = [];
-        var successes = []
-
-        for (var pi=0; pi<pulls_response.data.length; pi++){
-            var pull_number = pulls_response.data[pi]['number'];
-            var labels = pulls_response.data[pi]['labels'];
-            var base2head_enabled = false;
-            for (var li=0; li<labels.length;li++){
-                if (labels[li]["name"] === working_label){
-                    base2head_enabled = true;
-                    var label_str = JSON.stringify(labels[li], undefined, 4);
-                    console.log(`Pull ${pull_number} has label!: ${label_str}`);
-                    break;
-                }
-            }
-            if (base2head_enabled){
-                try{
-                    const update_response = await octokit.rest.pulls.updateBranch(
-                        {
-                            "owner":owner_name,
-                            "repo":repo_name,
-                            "pull_number":pull_number,
-                        }
-                    )
-                    console.log(update_response)
-                    successes.push(`#${pull_number}`)
-                }catch(e){
-                    console.log(`Failure while trying to update #${pull_number}`);
-                    console.log(typeof e)
-                    console.log(e)
-
-                    var has_response_message = (
-                        e.hasOwnProperty('response') 
-                        && e.response.hasOwnProperty('data')
-                        && e.response.data.hasOwnProperty('message')
-                    )
-                    if (has_response_message && e.response.data.message.indexOf('merge conflict') > -1){
-                        console.log(
-                            `Pull #${pull_number} has conflicts. Skipping.`
-                        )
-                    }else{
-                        failures.push(
-                            {
-                                pull_number: pulls_response.data['html_url']
-                            }
-                        );
-                    }
-                    
-                }
-            }else{
-                console.log(
-                    `Pull #${pull_number} is not labeled "${working_label}". Skipping.`
-                );
-            }
-        }
-
-        if(successes.length > 0){
-            core.setOutput("updated_pulls", successes.join(','))
-        }else{
-            core.setOutput("updated_pulls", "None")
-        }
-        if(failures.length > 0){
-            const failures_str = JSON.stringify(failures, undefined, 4)
-            core.setFailed(`Failed to update: ${failures_str}`);
-        }
-    } catch (error) {
-        core.setFailed(error.message);
+    if (workingLabel.length > 0) {
+      console.log(
+                `Looking for open PRs labeled with: ${workingLabel}!`
+      )
+    } else {
+      throw new Error({
+        error: "Invalid 'automerge-base2head-label'",
+        message: "Use 'with:' to specify a label to use."
+      })
     }
+    const octokit = github.getOctokit(repoToken)
+
+    const pullsResponse = await octokit.rest.pulls.list(
+      {
+        owner: ownerName,
+        repo: repoName,
+        base: branchName,
+        state: 'open',
+        sort: 'created',
+        direction: 'asc'
+      }
+    )
+    console.log(pullsResponse)
+
+    if (!('data' in pullsResponse) || pullsResponse.data.length === 0) {
+      console.log(`No pulls found pointing to branch: ${branchName}`)
+      return
+    }
+
+    const failures = []
+    const successes = []
+
+    for (let pi = 0; pi < pullsResponse.data.length; pi++) {
+      const pullNumber = pullsResponse.data[pi].number
+      const labels = pullsResponse.data[pi].labels
+      let base2headEnabled = false
+      for (let li = 0; li < labels.length; li++) {
+        if (labels[li].name === workingLabel) {
+          base2headEnabled = true
+          const labelStr = JSON.stringify(labels[li], undefined, 4)
+          console.log(`Pull ${pullNumber} has label!: ${labelStr}`)
+          break
+        }
+      }
+      if (base2headEnabled) {
+        try {
+          const updateResponse = await octokit.rest.pulls.updateBranch(
+            {
+              owner: ownerName,
+              repo: repoName,
+              pull_number: pullNumber
+            }
+          )
+          console.log(updateResponse)
+          successes.push(`#${pullNumber}`)
+        } catch (e) {
+          console.log(`Failure while trying to update #${pullNumber}`)
+          console.log(typeof e)
+          console.log(e)
+
+          const hasResponseMessage = (
+            ('response' in e) &&
+            ('data' in e.response) &&
+            ('message' in e.response.data)
+          )
+          if (hasResponseMessage && e.response.data.message.indexOf('merge conflict') > -1) {
+            console.log(
+                            `Pull #${pullNumber} has conflicts. Skipping.`
+            )
+          } else {
+            failures.push(
+              {
+                pull_number: pullsResponse.data.html_url
+              }
+            )
+          }
+        }
+      } else {
+        console.log(
+                    `Pull #${pullNumber} is not labeled "${workingLabel}". Skipping.`
+        )
+      }
+    }
+
+    if (successes.length > 0) {
+      core.setOutput('updated_pulls', successes.join(','))
+    } else {
+      core.setOutput('updated_pulls', 'None')
+    }
+    if (failures.length > 0) {
+      const failuresStr = JSON.stringify(failures, undefined, 4)
+      core.setFailed(`Failed to update: ${failuresStr}`)
+    }
+  } catch (error) {
+    core.setFailed(error.message)
+  }
 }
-run();
+run()
