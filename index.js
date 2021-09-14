@@ -1,8 +1,7 @@
 const core = require('@actions/core')
 const github = require('@actions/github')
 
-
-async function base2HeadUpdate() {
+async function base2HeadUpdate () {
   try {
     // Get the JSON webhook payload for the event that triggered the workflow
     const payloadStr = JSON.stringify(github.context, undefined, 2)
@@ -12,7 +11,7 @@ async function base2HeadUpdate() {
     const workingLabel = core.getInput(
       'act-label'
     )
-    const blockedLabels = core.getInput('skip-labels').map(v => v.toLowerCase())
+    const blockedLabels = JSON.parse(core.getInput('skip-labels')).map(v => v.toLowerCase())
 
     const payload = github.context.payload
     const repoName = payload.repository.name
@@ -62,7 +61,6 @@ async function base2HeadUpdate() {
       const pullNumber = pullsResponse.data[pi].number
       const labels = pullsResponse.data[pi].labels
       let base2headEnabled = false
-      let 
       for (let li = 0; li < labels.length; li++) {
         if (blockedLabels.includes(labels[li].name.toLowerCase())) {
           base2headEnabled = false
@@ -130,9 +128,9 @@ async function base2HeadUpdate() {
   }
 }
 
-async function run(){
-  const phases = core.getInput('merge-actions');
-  if(phases.includes('update-descendants')){
+async function run () {
+  const phases = JSON.parse(core.getInput('merge-actions'))
+  if (phases.includes('update-descendants')) {
     await base2HeadUpdate()
   }
 }
