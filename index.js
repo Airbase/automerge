@@ -133,5 +133,9 @@ async function run () {
   if (phases.includes('update-descendants')) {
     await base2HeadUpdate()
   }
+  if (phases.includes('merge-to-base')){
+    const payloadStr = JSON.stringify(github.context, undefined, 2)
+    console.log(payloadStr)
+  }
 }
 run()
