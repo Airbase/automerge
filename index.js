@@ -51,11 +51,11 @@ async function base2HeadUpdate () {
 
       let hasSkipLabel = false
       for (let li = 0; li < labels.length; li++) {
-        if (blockedLabels.includes(labels[li].name.toLowerCase())) {
-          hasSkipLabel = false
-          const labelStr = JSON.stringify(labels[li], undefined, 4)
-          console.log(`Pull ${pullNumber} has skip label!: ${labelStr}`)
-          return
+        let labelFound = labels[li].name.toLowerCase()
+        if (blockedLabels.includes(labelFound)) {
+          hasSkipLabel = true
+          console.log(`Pull ${pullNumber} has skip label!: ${labelFound}`)
+          break
         }
       }
 
