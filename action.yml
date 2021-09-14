@@ -11,7 +11,7 @@ inputs:
   skip-labels:
     description: 'Array of labels to skip'
     required: false
-    default: ['wip', 'do-not-merge']
+    default: '["wip", "do-not-merge"]'
   repo-token:
     required: true
     description: 'A github token with write access to update branches'
