@@ -49,8 +49,8 @@ async function base2HeadUpdate () {
         direction: 'asc'
       }
     )
-    console.log(pullsResponse)
-    console.log('^pullsResponse^')
+    // console.log(pullsResponse)
+    // console.log('^pullsResponse^')
 
     if (!('data' in pullsResponse) || pullsResponse.data.length === 0) {
       console.log(`No pulls found pointing to branch: ${branchName}`)
@@ -63,6 +63,10 @@ async function base2HeadUpdate () {
     for (let pi = 0; pi < pullsResponse.data.length; pi++) {
       const pullNumber = pullsResponse.data[pi].number
       const labels = pullsResponse.data[pi].labels
+
+      console.log("Auto merge")
+      console.log(pullNumber)
+      console.log(pullsResponse.data[pi].auto_merge)
 
       let base2headEnabled = false
       for (let li = 0; li < labels.length; li++) {
