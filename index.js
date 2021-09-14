@@ -8,9 +8,6 @@ async function base2HeadUpdate () {
     console.log(`The event payload: ${payloadStr}`)
 
     const repoToken = core.getInput('repo-token')
-    const workingLabel = core.getInput(
-      'act-label'
-    )
     const blockedLabels = JSON.parse(core.getInput('skip-labels')).map(v => v.toLowerCase())
 
     const payload = github.context.payload
@@ -25,16 +22,21 @@ async function base2HeadUpdate () {
       `Operating in: ${ownerName}/${repoName}@${branchName}`
     )
 
-    if (workingLabel.length > 0) {
-      console.log(
-        `Looking for open PRs labeled with: ${workingLabel}!`
-      )
-    } else {
-      throw new Error({
-        error: "Invalid 'automerge-base2head-label'",
-        message: "Use 'with:' to specify a label to use."
-      })
-    }
+    console.log(
+      `Looking for open PRs to ${branchName} which have auto merge enabled
+      but are not labelled with any of: [${blockedLabels}]`
+    )
+
+    // if (workingLabel.length > 0) {
+    //   console.log(
+    //     `Looking for open PRs labeled with: ${workingLabel}!`
+    //   )
+    // } else {
+    //   throw new Error({
+    //     error: "Invalid 'automerge-base2head-label'",
+    //     message: "Use 'with:' to specify a label to use."
+    //   })
+    // }
     const octokit = github.getOctokit(repoToken)
 
     const pullsResponse = await octokit.rest.pulls.list(
@@ -48,6 +50,7 @@ async function base2HeadUpdate () {
       }
     )
     console.log(pullsResponse)
+    console.log('^pullsResponse^')
 
     if (!('data' in pullsResponse) || pullsResponse.data.length === 0) {
       console.log(`No pulls found pointing to branch: ${branchName}`)
@@ -60,6 +63,7 @@ async function base2HeadUpdate () {
     for (let pi = 0; pi < pullsResponse.data.length; pi++) {
       const pullNumber = pullsResponse.data[pi].number
       const labels = pullsResponse.data[pi].labels
+
       let base2headEnabled = false
       for (let li = 0; li < labels.length; li++) {
         if (blockedLabels.includes(labels[li].name.toLowerCase())) {
@@ -68,11 +72,11 @@ async function base2HeadUpdate () {
           console.log(`Pull ${pullNumber} has skip label!: ${labelStr}`)
           break
         }
-        if (labels[li].name === workingLabel) {
-          base2headEnabled = true
-          const labelStr = JSON.stringify(labels[li], undefined, 4)
-          console.log(`Pull ${pullNumber} has label!: ${labelStr}`)
-        }
+        // if (labels[li].name === workingLabel) {
+        //   base2headEnabled = true
+        //   const labelStr = JSON.stringify(labels[li], undefined, 4)
+        //   console.log(`Pull ${pullNumber} has label!: ${labelStr}`)
+        // }
       }
       if (base2headEnabled) {
         try {
@@ -129,9 +133,6 @@ async function base2HeadUpdate () {
 }
 
 async function run () {
-  const phases = JSON.parse(core.getInput('merge-actions'))
-  if (phases.includes('update-descendants')) {
-    await base2HeadUpdate()
-  }
+  await base2HeadUpdate()
 }
 run()
