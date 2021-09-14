@@ -1,13 +1,6 @@
 name: 'Automerge-Base2Head'
 description: 'Automatically keep specified pull requests up to date. (Auto git merge-base or git rebase)'
 inputs:
-  merge-actions:
-    description: 'Array of actions enabled: "update-descendants" and/or "merge-to-base"'
-    required: true
-  act-label:
-    description: 'The label on pull requests to be monitored'
-    required: false
-    default: 'AUTOUPDATE'
   skip-labels:
     description: 'Array of labels to skip'
     required: false
