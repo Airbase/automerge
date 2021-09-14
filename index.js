@@ -43,7 +43,7 @@ async function base2HeadUpdate () {
       {
         owner: ownerName,
         repo: repoName,
-        base: branchName,
+        base: 'master',
         state: 'open',
         sort: 'created',
         direction: 'asc'
