@@ -4,8 +4,8 @@ const github = require('@actions/github')
 async function base2HeadUpdate () {
   try {
     // Get the JSON webhook payload for the event that triggered the workflow
-    const payloadStr = JSON.stringify(github.context, undefined, 2)
-    console.log(`The event payload: ${payloadStr}`)
+    // const payloadStr = JSON.stringify(github.context, undefined, 2)
+    // console.log(`The event payload: ${payloadStr}`)
 
     const repoToken = core.getInput('repo-token')
     const blockedLabels = JSON.parse(core.getInput('skip-labels')).map(v => v.toLowerCase())
@@ -26,32 +26,17 @@ async function base2HeadUpdate () {
       `Looking for open PRs to ${branchName} which have auto merge enabled
       but are not labelled with any of: [${blockedLabels}]`
     )
-
-    // if (workingLabel.length > 0) {
-    //   console.log(
-    //     `Looking for open PRs labeled with: ${workingLabel}!`
-    //   )
-    // } else {
-    //   throw new Error({
-    //     error: "Invalid 'automerge-base2head-label'",
-    //     message: "Use 'with:' to specify a label to use."
-    //   })
-    // }
     const octokit = github.getOctokit(repoToken)
-
     const pullsResponse = await octokit.rest.pulls.list(
       {
         owner: ownerName,
         repo: repoName,
-        base: 'master',
+        base: branchName,
         state: 'open',
         sort: 'created',
         direction: 'asc'
       }
     )
-    // console.log(pullsResponse)
-    // console.log('^pullsResponse^')
-
     if (!('data' in pullsResponse) || pullsResponse.data.length === 0) {
       console.log(`No pulls found pointing to branch: ${branchName}`)
       return
@@ -64,25 +49,27 @@ async function base2HeadUpdate () {
       const pullNumber = pullsResponse.data[pi].number
       const labels = pullsResponse.data[pi].labels
 
-      console.log("Auto merge")
-      console.log(pullNumber)
-      console.log(pullsResponse.data[pi].auto_merge)
-
-      let base2headEnabled = false
+      let hasSkipLabel = false
       for (let li = 0; li < labels.length; li++) {
         if (blockedLabels.includes(labels[li].name.toLowerCase())) {
-          base2headEnabled = false
+          hasSkipLabel = false
           const labelStr = JSON.stringify(labels[li], undefined, 4)
           console.log(`Pull ${pullNumber} has skip label!: ${labelStr}`)
-          break
+          return
         }
-        // if (labels[li].name === workingLabel) {
-        //   base2headEnabled = true
-        //   const labelStr = JSON.stringify(labels[li], undefined, 4)
-        //   console.log(`Pull ${pullNumber} has label!: ${labelStr}`)
-        // }
       }
-      if (base2headEnabled) {
+
+      const base2headEnabled = (
+        ('auto_merge' in pullsResponse.data[pi]) &&
+        (!!pullsResponse.data[pi].auto_merge) &&
+        (!!pullsResponse.data[pi].auto_merge.enabled_by)
+      )
+
+      if (base2headEnabled && !hasSkipLabel) {
+        const enablingUsr = pullsResponse.data[pi].auto_merge.enabled_by.login
+        console.log(
+          `Updating head for #${pullNumber}; auto merge enabled by ${enablingUsr}`
+        )
         try {
           const updateResponse = await octokit.rest.pulls.updateBranch(
             {
