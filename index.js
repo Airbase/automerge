@@ -1,7 +1,8 @@
 const core = require('@actions/core')
 const github = require('@actions/github')
 
-async function run () {
+
+async function base2HeadUpdate() {
   try {
     // Get the JSON webhook payload for the event that triggered the workflow
     const payloadStr = JSON.stringify(github.context, undefined, 2)
@@ -9,8 +10,9 @@ async function run () {
 
     const repoToken = core.getInput('repo-token')
     const workingLabel = core.getInput(
-      'automerge-base2head-label'
+      'act-label'
     )
+    const blockedLabels = core.getInput('skip-labels').map(v => v.toLowerCase())
 
     const payload = github.context.payload
     const repoName = payload.repository.name
@@ -21,12 +23,12 @@ async function run () {
     const branchName = refsarr.join('/')
 
     console.log(
-            `Operating in: ${ownerName}/${repoName}@${branchName}`
+      `Operating in: ${ownerName}/${repoName}@${branchName}`
     )
 
     if (workingLabel.length > 0) {
       console.log(
-                `Looking for open PRs labeled with: ${workingLabel}!`
+        `Looking for open PRs labeled with: ${workingLabel}!`
       )
     } else {
       throw new Error({
@@ -60,12 +62,18 @@ async function run () {
       const pullNumber = pullsResponse.data[pi].number
       const labels = pullsResponse.data[pi].labels
       let base2headEnabled = false
+      let 
       for (let li = 0; li < labels.length; li++) {
+        if (blockedLabels.includes(labels[li].name.toLowerCase())) {
+          base2headEnabled = false
+          const labelStr = JSON.stringify(labels[li], undefined, 4)
+          console.log(`Pull ${pullNumber} has skip label!: ${labelStr}`)
+          break
+        }
         if (labels[li].name === workingLabel) {
           base2headEnabled = true
           const labelStr = JSON.stringify(labels[li], undefined, 4)
           console.log(`Pull ${pullNumber} has label!: ${labelStr}`)
-          break
         }
       }
       if (base2headEnabled) {
@@ -91,7 +99,7 @@ async function run () {
           )
           if (hasResponseMessage && e.response.data.message.indexOf('merge conflict') > -1) {
             console.log(
-                            `Pull #${pullNumber} has conflicts. Skipping.`
+              `Pull #${pullNumber} has conflicts. Skipping.`
             )
           } else {
             failures.push(
@@ -103,7 +111,7 @@ async function run () {
         }
       } else {
         console.log(
-                    `Pull #${pullNumber} is not labeled "${workingLabel}". Skipping.`
+          `Pull #${pullNumber} skipped.`
         )
       }
     }
@@ -119,6 +127,13 @@ async function run () {
     }
   } catch (error) {
     core.setFailed(error.message)
+  }
+}
+
+async function run(){
+  const phases = core.getInput('merge-actions');
+  if(phases.includes('update-descendants')){
+    await base2HeadUpdate()
   }
 }
 run()
