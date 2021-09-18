@@ -102,7 +102,8 @@ class Base2HeadUpdate {
       sort: 'created',
       direction: 'asc'
     }).then(pullsResponse => {
-      for (let pi = 0; pi < pullsResponse.data.length; pi++) {
+      console.log(`Found ${pullsResponse.length} descendant(s)`)
+      for (let pi = 0; pi < pullsResponse.length; pi++) {
         this.processPull(pullsResponse[pi])
       }
     })
