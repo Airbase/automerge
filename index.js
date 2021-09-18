@@ -94,36 +94,37 @@ class Base2HeadUpdate {
   }
 
   async run () {
-    try {
-      await this.octokit.paginate(this.octokit.rest.pulls.list, {
-        owner: this.ownerName,
-        repo: this.repoName,
-        base: this.branchName,
-        state: 'open',
-        sort: 'created',
-        direction: 'asc'
-      }).then(pullsResponse => {
-        for (let pi = 0; pi < pullsResponse.data.length; pi++) {
-          this.processPull(pullsResponse[pi])
-        }
-      })
+    await this.octokit.paginate(this.octokit.rest.pulls.list, {
+      owner: this.ownerName,
+      repo: this.repoName,
+      base: this.branchName,
+      state: 'open',
+      sort: 'created',
+      direction: 'asc'
+    }).then(pullsResponse => {
+      for (let pi = 0; pi < pullsResponse.data.length; pi++) {
+        this.processPull(pullsResponse[pi])
+      }
+    })
 
-      if (this.successes.length > 0) {
-        core.setOutput('updated_pulls', this.successes.join(','))
-      } else {
-        core.setOutput('updated_pulls', 'None')
-      }
-      if (this.failures.length > 0) {
-        const failuresStr = JSON.stringify(this.failures, undefined, 4)
-        core.setFailed(`Failed to update: ${failuresStr}`)
-      }
-    } catch (error) {
-      core.setFailed(error.message)
+    if (this.successes.length > 0) {
+      core.setOutput('updated_pulls', this.successes.join(','))
+    } else {
+      core.setOutput('updated_pulls', 'None')
+    }
+    if (this.failures.length > 0) {
+      const failuresStr = JSON.stringify(this.failures, undefined, 4)
+      core.setFailed(`Failed to update: ${failuresStr}`)
     }
   }
 }
 
 async function run () {
-  await Base2HeadUpdate()
+  try {
+    const handler = new Base2HeadUpdate()
+    await handler.run()
+  } catch (error) {
+    core.setFailed(error.message)
+  }
 }
 run()
