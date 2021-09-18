@@ -1,143 +1,129 @@
 const core = require('@actions/core')
 const github = require('@actions/github')
 
-function shouldRun (prObj, blockedLabels, actLabel) {
-  const pullNumber = prObj.number
-  const labels = prObj.labels
-  let hasSkipLabel = false
-  let hasActLabel = false
-  for (let li = 0; li < labels.length; li++) {
-    const labelFound = labels[li].name.toLowerCase()
-    if (blockedLabels.includes(labelFound)) {
-      hasSkipLabel = true
-      console.log(`Pull #${pullNumber} has skip label: ${labelFound}!`)
-      break
-    } else if (!!actLabel && labelFound === actLabel.toLowerCase()) {
-      hasActLabel = true
-      console.log(
-        `Pull ${pullNumber} has act label: ${labelFound}, continue looking for skip labels`
+class Base2HeadUpdate {
+  shouldRun (prObj) {
+    const pullNumber = prObj.number
+    const labels = prObj.labels
+    let hasSkipLabel = false
+    let hasActLabel = false
+    for (let li = 0; li < labels.length; li++) {
+      const labelFound = labels[li].name.toLowerCase()
+      if (this.blockedLabels.includes(labelFound)) {
+        hasSkipLabel = true
+        console.log(`Pull #${pullNumber} has skip label: ${labelFound}!`)
+        break
+      } else if (!!this.actLabel && labelFound === this.actLabel.toLowerCase()) {
+        hasActLabel = true
+        console.log(
+          `Pull ${pullNumber} has act label: ${labelFound}, continue looking for skip labels`
+        )
+      }
+    }
+    const autoMergeEnabled = (
+      ('auto_merge' in prObj) && (!!prObj.auto_merge) && (!!prObj.auto_merge.enabled_by)
+    )
+    if (autoMergeEnabled) {
+      console.log(`Automerge enabled by: ${prObj.auto_merge.enabled_by.login}`)
+    }
+
+    return !hasSkipLabel && (
+      hasActLabel || (
+        autoMergeEnabled
       )
+    )
+  }
+
+  async processPull (prObj) {
+    const pullNumber = prObj.number
+    const base2headEnabled = this.shouldRun(prObj)
+
+    if (base2headEnabled) {
+      try {
+        const updateResponse = await this.octokit.rest.pulls.updateBranch(
+          {
+            owner: this.ownerName,
+            repo: this.repoName,
+            pull_number: pullNumber
+          }
+        )
+        this.successes.push(`#${pullNumber}`)
+        console.log(`Pull updated: ${prObj.html_url} :: ${updateResponse}`)
+      } catch (e) {
+        console.error(`Failure while trying to update #${pullNumber}`)
+        console.error(e)
+
+        const hasMergeConflicts = (
+          'response' in e && 'data' in e.response && 'message' in e.response.data &&
+          (e.response.data.message.indexOf('merge conflict') > -1)
+        )
+        if (hasMergeConflicts) {
+          console.error(`Pull #${pullNumber} has conflicts. Skipping.`)
+        } else {
+          this.failures.push({ pull_number: prObj.html_url })
+        }
+      }
+    } else {
+      console.log(`Pull skipped: ${prObj.html_url}`)
     }
   }
-  const autoMergeEnabled = (
-    ('auto_merge' in prObj) && (!!prObj.auto_merge) && (!!prObj.auto_merge.enabled_by)
-  )
-  if (autoMergeEnabled) {
-    console.log(`Automerge enabled by: ${prObj.auto_merge.enabled_by.login}`)
-  }
 
-  return !hasSkipLabel && (
-    hasActLabel || (
-      autoMergeEnabled
-    )
-  )
-}
-
-async function base2HeadUpdate () {
-  try {
+  constructor () {
     const repoToken = core.getInput('repo-token')
-    const blockedLabels = JSON.parse(core.getInput('skip-labels')).map(v => v.toLowerCase())
-    const actLabel = core.getInput('act-label')
+    this.blockedLabels = JSON.parse(core.getInput('skip-labels')).map(v => v.toLowerCase())
+    this.actLabel = core.getInput('act-label')
 
     const payload = github.context.payload
-    const repoName = payload.repository.name
-    const ownerName = payload.repository.owner.name
+    this.repoName = payload.repository.name
+    this.ownerName = payload.repository.owner.name
 
     const refsarr = payload.ref.split('/')
     refsarr.splice(0, 2)
-    const branchName = refsarr.join('/')
+    this.branchName = refsarr.join('/')
 
     console.log(
-      `Operating in: ${ownerName}/${repoName}@${branchName}`
+      `Operating in: ${this.ownerName}/${this.repoName}@${this.branchName}`
     )
 
-    console.log(`Looking for open PRs to ${branchName}`)
-    console.log(`Blocked: [${blockedLabels}], include:${actLabel}`)
+    console.log(`Looking for open PRs to ${this.branchName}`)
+    console.log(`Blocked: [${this.blockedLabels}], include:${this.actLabel}`)
 
-    const octokit = github.getOctokit(repoToken)
-    octokit.paginate(octokit.rest.pulls.list, {
-        owner: ownerName,
-        repo: repoName,
-        base: 'master',
+    this.octokit = github.getOctokit(repoToken)
+    this.failures = []
+    this.successes = []
+  }
+
+  async run () {
+    try {
+      await this.octokit.paginate(this.octokit.rest.pulls.list, {
+        owner: this.ownerName,
+        repo: this.repoName,
+        base: this.branchName,
         state: 'open',
         sort: 'created',
         direction: 'asc'
-      }
-    ).then(pullsResponse=>{
-      console.log("@@@")
-      console.log(pullsResponse.length)
-      console.log("@@@")
-    })
-
-    return
-    const pullsResponse = await octokit.rest.pulls.list(
-      {
-        owner: ownerName,
-        repo: repoName,
-        base: branchName,
-        state: 'open',
-        sort: 'created',
-        direction: 'asc'
-      }
-    )
-    if (!('data' in pullsResponse) || pullsResponse.data.length === 0) {
-      console.log(`No pulls found pointing to branch: ${branchName}`)
-      return
-    }
-
-    const failures = []
-    const successes = []
-
-    for (let pi = 0; pi < pullsResponse.data.length; pi++) {
-      const prObj = pullsResponse.data[pi]
-      const pullNumber = prObj.number
-      const base2headEnabled = shouldRun(prObj, blockedLabels, actLabel)
-
-      if (base2headEnabled) {
-        try {
-          const updateResponse = await octokit.rest.pulls.updateBranch(
-            {
-              owner: ownerName,
-              repo: repoName,
-              pull_number: pullNumber
-            }
-          )
-          successes.push(`#${pullNumber}`)
-          console.log(`Pull updated: ${prObj.html_url} :: ${updateResponse}`)
-        } catch (e) {
-          console.error(`Failure while trying to update #${pullNumber}`)
-          console.error(e)
-
-          const hasMergeConflicts = (
-            'response' in e && 'data' in e.response && 'message' in e.response.data &&
-            (e.response.data.message.indexOf('merge conflict') > -1)
-          )
-          if (hasMergeConflicts) {
-            console.error(`Pull #${pullNumber} has conflicts. Skipping.`)
-          } else {
-            failures.push({ pull_number: pullsResponse.data.html_url })
-          }
+      }).then(pullsResponse => {
+        for (let pi = 0; pi < pullsResponse.data.length; pi++) {
+          this.processPull(pullsResponse[pi])
         }
-      } else {
-        console.log(`Pull skipped: ${prObj.html_url}`)
-      }
-    }
+      })
 
-    if (successes.length > 0) {
-      core.setOutput('updated_pulls', successes.join(','))
-    } else {
-      core.setOutput('updated_pulls', 'None')
+      if (this.successes.length > 0) {
+        core.setOutput('updated_pulls', this.successes.join(','))
+      } else {
+        core.setOutput('updated_pulls', 'None')
+      }
+      if (this.failures.length > 0) {
+        const failuresStr = JSON.stringify(this.failures, undefined, 4)
+        core.setFailed(`Failed to update: ${failuresStr}`)
+      }
+    } catch (error) {
+      core.setFailed(error.message)
     }
-    if (failures.length > 0) {
-      const failuresStr = JSON.stringify(failures, undefined, 4)
-      core.setFailed(`Failed to update: ${failuresStr}`)
-    }
-  } catch (error) {
-    core.setFailed(error.message)
   }
 }
 
 async function run () {
-  await base2HeadUpdate()
+  await Base2HeadUpdate()
 }
 run()
