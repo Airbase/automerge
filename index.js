@@ -104,7 +104,7 @@ async function base2HeadUpdate () {
           if (hasMergeConflicts) {
             console.error(`Pull #${pullNumber} has conflicts. Skipping.`)
           } else {
-            failures.push({pull_number: pullsResponse.data.html_url})
+            failures.push({ pull_number: pullsResponse.data.html_url })
           }
         }
       } else {
