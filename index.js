@@ -4,15 +4,17 @@ const github = require('@actions/github')
 function shouldRun (prObj, blockedLabels, actLabel) {
   const pullNumber = prObj.number
   const labels = prObj.labels
+  console.log(prObj)
+  console.log("--pr--")
   let hasSkipLabel = false
   let hasActLabel = false
   for (let li = 0; li < labels.length; li++) {
     const labelFound = labels[li].name.toLowerCase()
     if (blockedLabels.includes(labelFound)) {
       hasSkipLabel = true
-      console.log(`Pull ${pullNumber} has skip label: ${labelFound}!`)
+      console.log(`Pull #${pullNumber} has skip label: ${labelFound}!`)
       break
-    } else if (!!actLabel && labelFound === actLabel) {
+    } else if (!!actLabel && labelFound === actLabel.toLowerCase()) {
       hasActLabel = true
       console.log(
         `Pull ${pullNumber} has act label: ${labelFound}, continue looking for skip labels`
