@@ -58,7 +58,7 @@ async function base2HeadUpdate () {
     octokit.paginate(octokit.rest.pulls.list, {
         owner: ownerName,
         repo: repoName,
-        base: branchName,
+        base: 'master',
         state: 'open',
         sort: 'created',
         direction: 'asc'
