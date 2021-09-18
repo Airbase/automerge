@@ -48,11 +48,9 @@ class Base2HeadUpdate {
           }
         )
         this.successes.push(`#${pullNumber}`)
-        console.log(`Pull updated: ${prObj.html_url} :: ${updateResponse}`)
+        console.log(`Pull updated: ${prObj.html_url} :: ${JSON.stringify(updateResponse)}`)
       } catch (e) {
         console.error(`Failure while trying to update #${pullNumber}`)
-        console.error(e)
-
         const hasMergeConflicts = (
           'response' in e && 'data' in e.response && 'message' in e.response.data &&
           (e.response.data.message.indexOf('merge conflict') > -1)
@@ -60,6 +58,7 @@ class Base2HeadUpdate {
         if (hasMergeConflicts) {
           console.error(`Pull #${pullNumber} has conflicts. Skipping.`)
         } else {
+          console.error(e)
           this.failures.push({ pull_number: prObj.html_url })
         }
       }
