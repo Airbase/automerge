@@ -4,8 +4,6 @@ const github = require('@actions/github')
 function shouldRun (prObj, blockedLabels, actLabel) {
   const pullNumber = prObj.number
   const labels = prObj.labels
-  console.log(prObj)
-  console.log("--pr--")
   let hasSkipLabel = false
   let hasActLabel = false
   for (let li = 0; li < labels.length; li++) {
@@ -93,33 +91,24 @@ async function base2HeadUpdate () {
               pull_number: pullNumber
             }
           )
-          console.log(updateResponse)
           successes.push(`#${pullNumber}`)
+          console.log(`Pull updated: ${prObj.html_url} :: ${updateResponse}`)
         } catch (e) {
           console.error(`Failure while trying to update #${pullNumber}: ${typeof e}`)
           console.error(e)
 
-          const hasResponseMessage = (
-            ('response' in e) &&
-            ('data' in e.response) &&
-            ('message' in e.response.data)
+          const hasMergeConflicts = (
+            'response' in e && 'data' in e.response && 'message' in e.response.data &&
+            (e.response.data.message.indexOf('merge conflict') > -1)
           )
-          if (hasResponseMessage && e.response.data.message.indexOf('merge conflict') > -1) {
-            console.error(
-              `Pull #${pullNumber} has conflicts. Skipping.`
-            )
+          if (hasMergeConflicts) {
+            console.error(`Pull #${pullNumber} has conflicts. Skipping.`)
           } else {
-            failures.push(
-              {
-                pull_number: pullsResponse.data.html_url
-              }
-            )
+            failures.push({pull_number: pullsResponse.data.html_url})
           }
         }
       } else {
-        console.log(
-          `Pull #${pullNumber} skipped.`
-        )
+        console.log(`Pull skipped: ${prObj.html_url}`)
       }
     }
 
