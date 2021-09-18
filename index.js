@@ -48,7 +48,7 @@ class Base2HeadUpdate {
           }
         )
         this.successes.push(`#${pullNumber}`)
-        console.log(`Pull updated: ${prObj.html_url} :: ${JSON.stringify(updateResponse)}`)
+        console.log(`Pull updated: ${prObj.html_url} :: ${JSON.stringify(updateResponse, null, 4)}`)
       } catch (e) {
         console.error(`Failure while trying to update #${pullNumber}`)
         const hasMergeConflicts = (
