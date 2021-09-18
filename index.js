@@ -110,6 +110,7 @@ async function base2HeadUpdate () {
       } else {
         console.log(`Pull skipped: ${prObj.html_url}`)
       }
+      const i_b = 1
     }
 
     if (successes.length > 0) {
