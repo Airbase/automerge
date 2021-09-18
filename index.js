@@ -35,10 +35,6 @@ function shouldRun (prObj, blockedLabels, actLabel) {
 
 async function base2HeadUpdate () {
   try {
-    // Get the JSON webhook payload for the event that triggered the workflow
-    // const payloadStr = JSON.stringify(github.context, undefined, 2)
-    // console.log(`The event payload: ${payloadStr}`)
-
     const repoToken = core.getInput('repo-token')
     const blockedLabels = JSON.parse(core.getInput('skip-labels')).map(v => v.toLowerCase())
     const actLabel = core.getInput('act-label')
@@ -59,6 +55,21 @@ async function base2HeadUpdate () {
     console.log(`Blocked: [${blockedLabels}], include:${actLabel}`)
 
     const octokit = github.getOctokit(repoToken)
+    octokit.paginate(octokit.rest.pulls.list, {
+        owner: ownerName,
+        repo: repoName,
+        base: branchName,
+        state: 'open',
+        sort: 'created',
+        direction: 'asc'
+      }
+    ).then(pullsResponse=>{
+      console.log("@@@")
+      console.log(pullsResponse)
+      console.log("@@@")
+    })
+
+    return
     const pullsResponse = await octokit.rest.pulls.list(
       {
         owner: ownerName,
@@ -94,7 +105,7 @@ async function base2HeadUpdate () {
           successes.push(`#${pullNumber}`)
           console.log(`Pull updated: ${prObj.html_url} :: ${updateResponse}`)
         } catch (e) {
-          console.error(`Failure while trying to update #${pullNumber}: ${typeof e}`)
+          console.error(`Failure while trying to update #${pullNumber}`)
           console.error(e)
 
           const hasMergeConflicts = (
