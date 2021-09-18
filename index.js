@@ -65,7 +65,7 @@ async function base2HeadUpdate () {
       }
     ).then(pullsResponse=>{
       console.log("@@@")
-      console.log(pullsResponse)
+      console.log(pullsResponse.length)
       console.log("@@@")
     })
 
