@@ -1,0 +1,9 @@
+name: Eslint
+on: push
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run ESLint
+      run: ./node_modules/.bin/eslint . --ext .js,.jsx,.ts,.tsx
