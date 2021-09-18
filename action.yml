@@ -5,6 +5,9 @@ inputs:
     description: 'Array of labels to skip'
     required: false
     default: '["wip", "do-not-merge"]'
+  act-label:
+    description: 'Label to act on'
+    required: false
   repo-token:
     required: true
     description: 'A github token with write access to update branches'

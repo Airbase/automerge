@@ -1,6 +1,38 @@
 const core = require('@actions/core')
 const github = require('@actions/github')
 
+function shouldRun (prObj, blockedLabels, actLabel) {
+  const pullNumber = prObj.number
+  const labels = prObj.labels
+  let hasSkipLabel = false
+  let hasActLabel = false
+  for (let li = 0; li < labels.length; li++) {
+    const labelFound = labels[li].name.toLowerCase()
+    if (blockedLabels.includes(labelFound)) {
+      hasSkipLabel = true
+      console.log(`Pull ${pullNumber} has skip label: ${labelFound}!`)
+      break
+    } else if (!!actLabel && labelFound === actLabel) {
+      hasActLabel = true
+      console.log(
+        `Pull ${pullNumber} has act label: ${labelFound}, continue looking for skip labels`
+      )
+    }
+  }
+  const autoMergeEnabled = (
+    ('auto_merge' in prObj) && (!!prObj.auto_merge) && (!!prObj.auto_merge.enabled_by)
+  )
+  if (autoMergeEnabled) {
+    console.log(`Automerge enabled by: ${prObj.auto_merge.enabled_by.login}`)
+  }
+
+  return !hasSkipLabel && (
+    hasActLabel || (
+      autoMergeEnabled
+    )
+  )
+}
+
 async function base2HeadUpdate () {
   try {
     // Get the JSON webhook payload for the event that triggered the workflow
@@ -9,6 +41,7 @@ async function base2HeadUpdate () {
 
     const repoToken = core.getInput('repo-token')
     const blockedLabels = JSON.parse(core.getInput('skip-labels')).map(v => v.toLowerCase())
+    const actLabel = core.getInput('act-label')
 
     const payload = github.context.payload
     const repoName = payload.repository.name
@@ -22,10 +55,9 @@ async function base2HeadUpdate () {
       `Operating in: ${ownerName}/${repoName}@${branchName}`
     )
 
-    console.log(
-      `Looking for open PRs to ${branchName} which have auto merge enabled
-      but are not labelled with any of: [${blockedLabels}]`
-    )
+    console.log(`Looking for open PRs to ${branchName}`)
+    console.log(`Blocked: [${blockedLabels}], include:${actLabel}`)
+
     const octokit = github.getOctokit(repoToken)
     const pullsResponse = await octokit.rest.pulls.list(
       {
@@ -46,30 +78,11 @@ async function base2HeadUpdate () {
     const successes = []
 
     for (let pi = 0; pi < pullsResponse.data.length; pi++) {
-      const pullNumber = pullsResponse.data[pi].number
-      const labels = pullsResponse.data[pi].labels
+      const prObj = pullsResponse.data[pi]
+      const pullNumber = prObj.number
+      const base2headEnabled = shouldRun(prObj, blockedLabels, actLabel)
 
-      let hasSkipLabel = false
-      for (let li = 0; li < labels.length; li++) {
-        let labelFound = labels[li].name.toLowerCase()
-        if (blockedLabels.includes(labelFound)) {
-          hasSkipLabel = true
-          console.log(`Pull ${pullNumber} has skip label!: ${labelFound}`)
-          break
-        }
-      }
-
-      const base2headEnabled = (
-        ('auto_merge' in pullsResponse.data[pi]) &&
-        (!!pullsResponse.data[pi].auto_merge) &&
-        (!!pullsResponse.data[pi].auto_merge.enabled_by)
-      )
-
-      if (base2headEnabled && !hasSkipLabel) {
-        const enablingUsr = pullsResponse.data[pi].auto_merge.enabled_by.login
-        console.log(
-          `Updating head for #${pullNumber}; auto merge enabled by ${enablingUsr}`
-        )
+      if (base2headEnabled) {
         try {
           const updateResponse = await octokit.rest.pulls.updateBranch(
             {
@@ -81,9 +94,8 @@ async function base2HeadUpdate () {
           console.log(updateResponse)
           successes.push(`#${pullNumber}`)
         } catch (e) {
-          console.log(`Failure while trying to update #${pullNumber}`)
-          console.log(typeof e)
-          console.log(e)
+          console.error(`Failure while trying to update #${pullNumber}: ${typeof e}`)
+          console.error(e)
 
           const hasResponseMessage = (
             ('response' in e) &&
@@ -91,7 +103,7 @@ async function base2HeadUpdate () {
             ('message' in e.response.data)
           )
           if (hasResponseMessage && e.response.data.message.indexOf('merge conflict') > -1) {
-            console.log(
+            console.error(
               `Pull #${pullNumber} has conflicts. Skipping.`
             )
           } else {
