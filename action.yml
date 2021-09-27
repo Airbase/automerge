@@ -1,17 +1,13 @@
 name: 'Automerge-Base2Head'
 description: 'Automatically keep specified pull requests up to date. (Auto git merge-base or git rebase)'
 inputs:
-  merge-actions:
-    description: 'Array of actions enabled: "update-descendants" and/or "merge-to-base"'
-    required: true
-  act-label:
-    description: 'The label on pull requests to be monitored'
-    required: false
-    default: 'AUTOUPDATE'
   skip-labels:
     description: 'Array of labels to skip'
     required: false
     default: '["wip", "do-not-merge"]'
+  act-label:
+    description: 'Label to act on'
+    required: false
   repo-token:
     required: true
     description: 'A github token with write access to update branches'
