@@ -93,19 +93,19 @@ class Base2HeadUpdate {
   }
 
   async run () {
-    await this.octokit.paginate(this.octokit.rest.pulls.list, {
+    const pullsResponse = await this.octokit.paginate(this.octokit.rest.pulls.list, {
       owner: this.ownerName,
       repo: this.repoName,
       base: this.branchName,
       state: 'open',
       sort: 'created',
       direction: 'asc'
-    }).then(pullsResponse => {
-      console.log(`Found ${pullsResponse.length} descendant(s)`)
-      for (let pi = 0; pi < pullsResponse.length; pi++) {
-        this.processPull(pullsResponse[pi])
-      }
     })
+
+    console.log(`Found ${pullsResponse.length} descendant(s)`)
+    for (let pi = 0; pi < pullsResponse.length; pi++) {
+      this.processPull(pullsResponse[pi])
+    }
 
     if (this.successes.length > 0) {
       core.setOutput('updated_pulls', this.successes.join(','))
