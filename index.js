@@ -104,7 +104,7 @@ class Base2HeadUpdate {
 
     console.log(`Found ${pullsResponse.length} descendant(s)`)
     for (let pi = 0; pi < pullsResponse.length; pi++) {
-      this.processPull(pullsResponse[pi])
+      await this.processPull(pullsResponse[pi])
     }
 
     if (this.successes.length > 0) {
